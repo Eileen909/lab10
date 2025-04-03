@@ -3,8 +3,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, when, count, isnan, isnull
 import plotly.express as px
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
@@ -12,12 +10,6 @@ from sklearn.cluster import KMeans
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, silhouette_score
 import os
-
-# Initialize Spark Session with local mode for cloud deployment
-spark = SparkSession.builder \
-    .appName("ECommerceAnalysis") \
-    .config("spark.master", "local") \
-    .getOrCreate()
 
 # Set page config
 st.set_page_config(page_title="Women's Clothing E-Commerce Analysis", layout="wide")
@@ -68,7 +60,6 @@ def load_data():
 
 # Load data
 df = load_data()
-spark_df = spark.createDataFrame(df)
 
 if page == "Data Overview":
     st.header("Dataset Overview")
@@ -97,8 +88,8 @@ elif page == "Data Cleaning":
     
     # Missing values analysis
     st.subheader("Missing Values Analysis")
-    missing_values = spark_df.select([count(when(isnan(c) | isnull(c), c)).alias(c) for c in spark_df.columns])
-    st.dataframe(missing_values.toPandas())
+    missing_values = df.isnull().sum()
+    st.dataframe(missing_values)
     
     # Data cleaning options
     st.subheader("Data Cleaning Options")
@@ -107,14 +98,14 @@ elif page == "Data Cleaning":
     
     if st.button("Apply Cleaning"):
         if cleaning_option == "Remove missing values":
-            cleaned_df = spark_df.na.drop()
+            cleaned_df = df.dropna()
         elif cleaning_option == "Fill missing values with mean":
-            cleaned_df = spark_df.na.fill(df.mean())
+            cleaned_df = df.fillna(df.mean())
         else:
-            cleaned_df = spark_df.na.fill(df.mode().iloc[0])
+            cleaned_df = df.fillna(df.mode().iloc[0])
         
         st.write("Cleaned Data Sample")
-        st.dataframe(cleaned_df.limit(5).toPandas())
+        st.dataframe(cleaned_df.head())
 
 elif page == "EDA":
     st.header("Exploratory Data Analysis")
